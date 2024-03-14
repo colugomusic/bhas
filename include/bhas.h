@@ -111,10 +111,10 @@ struct audio_cb {
 
 struct cb { std::any user; };
 
-struct stream_request_failure_cb : cb  { auto (*fn)(std::any user, bhas::log log) -> void; };
-struct stream_request_success_cb : cb  { auto (*fn)(std::any user, bhas::log log, bhas::stream stream) -> void; };
-struct stream_stopped_cb : cb          { auto (*fn)(std::any user) -> void; };
-struct stream_starting_cb : cb          { auto (*fn)(std::any user, bhas::stream stream) -> void; };
+struct stream_start_failure_cb : cb { auto (*fn)(std::any user, bhas::log log) -> void = nullptr; };
+struct stream_start_success_cb : cb { auto (*fn)(std::any user, bhas::log log, bhas::stream stream) -> void = nullptr; };
+struct stream_stopped_cb : cb       { auto (*fn)(std::any user) -> void = nullptr; };
+struct stream_starting_cb : cb      { auto (*fn)(std::any user, bhas::stream stream) -> void = nullptr; };
 
 struct stream_request {
 	std::optional<bhas::device_index> input_device;
@@ -129,6 +129,14 @@ struct user_config {
 	bhas::sample_rate sample_rate;
 };
 
+struct callbacks {
+	audio_cb audio;
+	stream_start_failure_cb stream_start_failure;
+	stream_start_success_cb stream_start_success;
+	stream_starting_cb stream_starting;
+	stream_stopped_cb stream_stopped;
+};
+
 [[nodiscard]] inline auto is_flag_set(device_flags mask, device_flags::e flag) -> bool { return (mask.value & flag) == flag; }
 [[nodiscard]] inline auto is_flag_set(host_flags mask, host_flags::e flag) -> bool     { return (mask.value & flag) == flag; }
 
@@ -139,13 +147,8 @@ struct user_config {
 [[nodiscard]] auto get_system() -> const bhas::system&;
 [[nodiscard]] auto get_system(bhas::system_rescan) -> const bhas::system&;
 [[nodiscard]] auto make_request_from_user_config(const bhas::user_config& config, bhas::log* log) -> std::optional<bhas::stream_request>;
-auto init() -> void;
+auto init(callbacks cb) -> void;
 auto request_stream(bhas::stream_request request, bhas::log* log) -> void;
-auto set(audio_cb cb) -> void;
-auto set(stream_request_failure_cb cb) -> void;
-auto set(stream_request_success_cb cb) -> void;
-auto set(stream_starting_cb cb) -> void;
-auto set(stream_stopped_cb cb) -> void;
 auto shutdown() -> void;
 auto stop_stream(bhas::log* log) -> void;
 auto update(bhas::log* log) -> void;

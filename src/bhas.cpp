@@ -9,8 +9,8 @@ namespace bhas {
 struct Callbacks {
 	bhas::stream_starting_cb stream_starting;
 	bhas::stream_stopped_cb stream_stopped;
-	bhas::stream_request_failure_cb stream_request_failure;
-	bhas::stream_request_success_cb stream_request_success;
+	bhas::stream_start_failure_cb stream_start_failure;
+	bhas::stream_start_success_cb stream_start_success;
 };
 
 struct Critical {
@@ -154,9 +154,14 @@ auto get_system(bhas::system_rescan) -> const bhas::system& {
 	return *model.system;
 }
 
-auto init() -> void {
+auto init(callbacks cb) -> void {
 	api::init();
 	api::set(make_stream_stopped_cb());
+	api::set(std::move(cb.audio));
+	model.cb.stream_starting      = std::move(cb.stream_starting);
+	model.cb.stream_stopped       = std::move(cb.stream_stopped);
+	model.cb.stream_start_failure = std::move(cb.stream_start_failure);
+	model.cb.stream_start_success = std::move(cb.stream_start_success);
 }
 
 auto request_stream(bhas::stream_request request, bhas::log* log) -> void {
@@ -168,7 +173,7 @@ auto request_stream(bhas::stream_request request, bhas::log* log) -> void {
 	bhas::stream stream;
 	bhas::log local_log;
 	if (!api::open_stream(request, &local_log, &stream.num_input_channels)) {
-		model.cb.stream_request_failure.fn(model.cb.stream_request_failure.user, std::move(local_log));
+		model.cb.stream_start_failure.fn(model.cb.stream_start_failure.user, std::move(local_log));
 		return;
 	}
 	stream.host                = system.devices.at(request.output_device.value).host;
@@ -180,30 +185,10 @@ auto request_stream(bhas::stream_request request, bhas::log* log) -> void {
 	model.current_stream       = stream;
 	model.cb.stream_starting.fn(model.cb.stream_starting.user, stream);
 	if (!api::start_stream(&local_log)) {
-		model.cb.stream_request_failure.fn(model.cb.stream_request_failure.user, std::move(local_log));
+		model.cb.stream_start_failure.fn(model.cb.stream_start_failure.user, std::move(local_log));
 		return;
 	}
-	model.cb.stream_request_success.fn(model.cb.stream_request_success.user, std::move(local_log), std::move(stream));
-}
-
-auto set(audio_cb cb) -> void {
-	api::set(std::move(cb));
-}
-
-auto set(stream_request_failure_cb cb) -> void {
-	model.cb.stream_request_failure = std::move(cb);
-}
-
-auto set(stream_request_success_cb cb) -> void {
-	model.cb.stream_request_success = std::move(cb);
-}
-
-auto set(stream_starting_cb cb) -> void {
-	model.cb.stream_starting = std::move(cb);
-}
-
-auto set(stream_stopped_cb cb) -> void {
-	model.cb.stream_stopped = std::move(cb);
+	model.cb.stream_start_success.fn(model.cb.stream_start_success.user, std::move(local_log), std::move(stream));
 }
 
 auto stop_stream(bhas::log* log) -> void {
