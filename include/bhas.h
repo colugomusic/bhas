@@ -133,7 +133,7 @@ struct callbacks {
 	stream_stopped_cb stream_stopped;
 };
 
-// Call this before anything else
+// Call this before anything else.
 // Every callback needs to be set.
 // Only the audio callback is called in the audio thread.
 // Everything else is called in the main thread.
@@ -151,9 +151,9 @@ auto shutdown() noexcept -> void;
 auto request_stream(bhas::stream_request request) noexcept -> void;
 
 // Asynchronously stop the stream.
-// This will return immediately.
+// This will return immediately, but the stream will take some time to stop.
 // The stream_stopped callback will be called in the main thread when
-// the stream has finished.
+// the stream has finished (during the next call to update().)
 auto stop_stream() noexcept -> void;
 
 // Keep calling this at regular intervals, in your main thread.
@@ -161,16 +161,18 @@ auto stop_stream() noexcept -> void;
 // where that will happen.
 // If there is a pending stream request, this is where that will
 // be done.
+// Otherwise does nothing.
 auto update() noexcept -> void;
 
 // Check if the given stream settings are supported by the system.
 // If they're not, we will try various fallback mechanisms and return
 // the updated settings.
-// Information about what we try will be reported via the report callback.
+// Information about what we tried is be reported via the report callback.
 [[nodiscard]] auto check_if_supported_or_try_to_fall_back(bhas::stream_request request) noexcept -> std::optional<bhas::stream_request>;
 
 // Get a reference to the system information. If the system
-// has never been scanned yet, it will happen automatically.
+// has not been scanned for audio devices yet, it will happen
+// here automatically.
 [[nodiscard]] auto get_system() noexcept -> const bhas::system&;
 
 // Get a reference to the system information.
