@@ -1,6 +1,5 @@
 #pragma once
 
-#include <any>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -97,18 +96,14 @@ struct stream {
 	std::optional<bhas::device_index> input_device;
 };
 
-struct audio_cb {
-	using fn_t = auto (*)(
-		std::any user,
+using audio_cb =
+	std::function<callback_result(
 		bhas::input_buffer input,
 		bhas::output_buffer output,
 		bhas::frame_count frame_count,
 		bhas::sample_rate sample_rate,
 		bhas::output_latency output_latency,
-		const bhas::time_info* time_info) -> callback_result;
-	fn_t fn;
-	std::any user;
-};
+		const bhas::time_info* time_info)>;
 
 using report_cb               = std::function<void(bhas::log log)>;
 using stream_start_failure_cb = std::function<void()>;

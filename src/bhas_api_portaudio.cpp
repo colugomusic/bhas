@@ -112,8 +112,7 @@ auto stream_audio_callback(
 	time_info.input_buffer_adc_time  = pa_time_info->inputBufferAdcTime;
 	time_info.output_buffer_dac_time = pa_time_info->outputBufferDacTime;
 	return callback_result_to_pa(
-		model.cb.audio.fn(
-			model.cb.audio.user,
+		model.cb.audio(
 			input_buffer,
 			output_buffer,
 			frame_count,
