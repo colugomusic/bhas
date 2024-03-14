@@ -192,7 +192,7 @@ auto get_cpu_load() -> cpu_load {
 }
 
 auto get_output_latency() -> bhas::output_latency {
-	if (!is_stream_active()) {
+	if (!model.current_stream) {
 		return {0.0};
 	}
 	return model.current_stream->output_latency;

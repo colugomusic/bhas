@@ -132,6 +132,7 @@ struct user_config {
 [[nodiscard]] inline auto is_flag_set(device_flags mask, device_flags::e flag) -> bool { return (mask.value & flag) == flag; }
 [[nodiscard]] inline auto is_flag_set(host_flags mask, host_flags::e flag) -> bool     { return (mask.value & flag) == flag; }
 
+[[nodiscard]] auto check_if_supported_or_try_to_fall_back(bhas::stream_request request, bhas::log* log) -> std::optional<bhas::stream_request>;
 [[nodiscard]] auto get_cpu_load() -> cpu_load;
 [[nodiscard]] auto get_current_stream() -> std::optional<bhas::stream>;
 [[nodiscard]] auto get_stream_time() -> stream_time;

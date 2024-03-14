@@ -228,8 +228,11 @@ auto shutdown() -> void {
 		info->done = true;
 		info->cv.notify_all();
 	};
-	api::stop_stream(nullptr);
 	std::unique_lock<std::mutex> lock{info.mutex};
+	model.critical.stream_stopped_cb = std::move(cb);
+	lock.unlock();
+	api::stop_stream(nullptr);
+	lock.lock();
 	info.cv.wait(lock, [&] { return info.done; });
 	api::shutdown();
 }
@@ -246,12 +249,17 @@ auto update(bhas::log* log) -> void {
 		}
 		// Close the stream if it's not already closed
 		api::close_stream();
+		model.current_stream = std::nullopt;
 		if (model.pending_stream_request) {
 			// If another stream request is pending, request the stream
 			request_stream(*model.pending_stream_request, log);
 			model.pending_stream_request = std::nullopt;
 		}
 	}
+}
+
+auto check_if_supported_or_try_to_fall_back(bhas::stream_request request, bhas::log* log) -> std::optional<bhas::stream_request> {
+	return api::check_if_supported_or_try_to_fall_back(request, log);
 }
 
 auto make_request_from_user_config(const bhas::user_config& config, bhas::log* log) -> std::optional<bhas::stream_request> {
@@ -272,13 +280,18 @@ auto make_request_from_user_config(const bhas::user_config& config, bhas::log* l
 		log->push_back(info__couldnt_find_user_input_device(config.input_device_name));
 		request.input_device = user_host.default_input_device;
 	}
+	else {
+		request.input_device = *user_input_device_index;
+	}
 	if (!user_output_device_index) {
 		log->push_back(info__couldnt_find_user_output_device(config.output_device_name));
 		request.output_device = user_host.default_output_device;
 	}
-	request.output_device = *user_output_device_index;
-	request.sample_rate   = config.sample_rate;
-	return api::check_if_supported_or_try_to_fall_back(request, log);
+	else {
+		request.output_device = *user_output_device_index;
+	}
+	request.sample_rate = config.sample_rate;
+	return check_if_supported_or_try_to_fall_back(request, log);
 }
 
 } // bhas
