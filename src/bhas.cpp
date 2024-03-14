@@ -213,6 +213,7 @@ auto stop_stream(bhas::log* log) -> void {
 // Stop current stream and block until finished
 auto shutdown() -> void {
 	if (!model.current_stream) {
+		api::shutdown();
 		return;
 	}
 	struct stop_info {
