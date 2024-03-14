@@ -124,8 +124,8 @@ auto stream_audio_callback(
 
 static
 auto stream_finished_callback(void*) -> void {
-	if (model.cb.stream_stopped.fn) {
-		model.cb.stream_stopped.fn(model.cb.stream_stopped.user);
+	if (model.cb.stream_stopped) {
+		model.cb.stream_stopped();
 	}
 }
 
@@ -278,9 +278,12 @@ auto err_stream_open_failed(PaError err) -> bhas::error {
 
 [[nodiscard]] static
 auto warn_failed_to_open_stream_but_i_will_try_again() -> bhas::warning {
-	return {"Failed to open the stream for some reason. "
-		"I'm going to try a few more times because sometimes these audio drivers are just stupid and "
-		"if you keep trying to open the stream then eventually it succeeds..."};
+	return {
+		"Failed to open the stream for some reason. "
+		"I'm going to try a few more times because sometimes "
+		"these audio drivers are just stupid and if you keep "
+		"trying to open the stream then eventually it succeeds..."
+	};
 }
 
 [[nodiscard]] static

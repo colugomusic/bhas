@@ -112,17 +112,15 @@ auto find_output_device(const bhas::system& system, host_index host, const devic
 
 [[nodiscard]] static
 auto make_stream_stopped_cb() -> bhas::stream_stopped_cb {
-	bhas::stream_stopped_cb cb;
-	cb.fn = [](std::any user) -> void {
+	return []() -> void {
 		std::unique_lock<std::mutex> lock{model.critical.mutex};
 		auto stopped_cb = model.critical.stream_stopped_cb;
 		model.critical.stream_stopped_cb = {};
 		lock.unlock();
-		if (stopped_cb.fn) {
-			stopped_cb.fn(stopped_cb.user);
+		if (stopped_cb) {
+			stopped_cb();
 		}
 	};
-	return cb;
 };
 
 static
@@ -175,8 +173,8 @@ auto request_stream(bhas::stream_request request) -> void {
 	bhas::stream stream;
 	bhas::log log;
 	if (!api::open_stream(request, &log, &stream.num_input_channels)) {
-		model.cb.report.fn(model.cb.report.user, std::move(log));
-		model.cb.stream_start_failure.fn(model.cb.stream_start_failure.user);
+		model.cb.report(std::move(log));
+		model.cb.stream_start_failure();
 		return;
 	}
 	stream.host                = system.devices.at(request.output_device.value).host;
@@ -186,20 +184,20 @@ auto request_stream(bhas::stream_request request) -> void {
 	stream.output_latency      = api::get_output_latency();
 	stream.sample_rate         = request.sample_rate;
 	model.current_stream       = stream;
-	model.cb.stream_starting.fn(model.cb.stream_starting.user, stream);
+	model.cb.stream_starting(stream);
 	if (!api::start_stream(&log)) {
-		model.cb.report.fn(model.cb.report.user, std::move(log));
-		model.cb.stream_start_failure.fn(model.cb.stream_start_failure.user);
+		model.cb.report(std::move(log));
+		model.cb.stream_start_failure();
 		return;
 	}
-	model.cb.report.fn(model.cb.report.user, std::move(log));
-	model.cb.stream_start_success.fn(model.cb.stream_start_success.user, std::move(stream));
+	model.cb.report(std::move(log));
+	model.cb.stream_start_success(std::move(stream));
 }
 
 auto stop_stream() -> void {
 	bhas::log log;
 	api::stop_stream(&log);
-	model.cb.report.fn(model.cb.report.user, std::move(log));
+	model.cb.report(std::move(log));
 }
 
 // Stop current stream and block until finished
@@ -214,12 +212,10 @@ auto shutdown() -> void {
 		std::condition_variable cv;
 	} info;
 	bhas::stream_stopped_cb cb;
-	cb.user = &info;
-	cb.fn   = [](std::any user) {
-		const auto info = std::any_cast<stop_info*>(user);
-		std::unique_lock<std::mutex> lock{info->mutex};
-		info->done = true;
-		info->cv.notify_all();
+	cb = [&info]() {
+		std::unique_lock<std::mutex> lock{info.mutex};
+		info.done = true;
+		info.cv.notify_all();
 	};
 	std::unique_lock<std::mutex> lock{info.mutex};
 	model.critical.stream_stopped_cb = std::move(cb);
@@ -237,8 +233,8 @@ auto update() -> void {
 		auto stopped_cb = model.critical.stream_stopped_cb;
 		model.critical.stream_stopped_cb = {};
 		lock.unlock();
-		if (stopped_cb.fn) {
-			stopped_cb.fn(stopped_cb.user);
+		if (stopped_cb) {
+			stopped_cb();
 		}
 		// Close the stream if it's not already closed
 		api::close_stream();
@@ -254,7 +250,7 @@ auto update() -> void {
 auto check_if_supported_or_try_to_fall_back(bhas::stream_request request) -> std::optional<bhas::stream_request> {
 	bhas::log log;
 	auto supported_request = api::check_if_supported_or_try_to_fall_back(request, &log);
-	model.cb.report.fn(model.cb.report.user, std::move(log));
+	model.cb.report(std::move(log));
 	return supported_request;
 }
 
@@ -268,7 +264,7 @@ auto make_request_from_user_config(const bhas::user_config& config) -> std::opti
 		request.input_device  = system.default_input_device;
 		request.output_device = system.default_output_device;
 		request.sample_rate   = system.devices.at(request.output_device.value).default_sample_rate;
-		model.cb.report.fn(model.cb.report.user, std::move(log));
+		model.cb.report(std::move(log));
 		return request;
 	}
 	const auto user_host                = system.hosts.at(user_host_index->value);
@@ -289,7 +285,7 @@ auto make_request_from_user_config(const bhas::user_config& config) -> std::opti
 		request.output_device = *user_output_device_index;
 	}
 	request.sample_rate = config.sample_rate;
-	model.cb.report.fn(model.cb.report.user, std::move(log));
+	model.cb.report(std::move(log));
 	return check_if_supported_or_try_to_fall_back(request);
 }
 

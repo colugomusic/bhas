@@ -2,6 +2,7 @@
 
 #include <any>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <variant>
@@ -109,13 +110,11 @@ struct audio_cb {
 	std::any user;
 };
 
-struct cb { std::any user; };
-
-struct report_cb : cb               { auto (*fn)(std::any user, bhas::log log) -> void = nullptr; };
-struct stream_start_failure_cb : cb { auto (*fn)(std::any user) -> void = nullptr; };
-struct stream_start_success_cb : cb { auto (*fn)(std::any user, bhas::stream stream) -> void = nullptr; };
-struct stream_stopped_cb : cb       { auto (*fn)(std::any user) -> void = nullptr; };
-struct stream_starting_cb : cb      { auto (*fn)(std::any user, bhas::stream stream) -> void = nullptr; };
+using report_cb               = std::function<void(bhas::log log)>;
+using stream_start_failure_cb = std::function<void()>;
+using stream_start_success_cb = std::function<void(bhas::stream stream)>;
+using stream_starting_cb      = std::function<void(bhas::stream stream)>;
+using stream_stopped_cb       = std::function<void()>;
 
 struct stream_request {
 	std::optional<bhas::device_index> input_device;
