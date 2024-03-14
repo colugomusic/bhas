@@ -252,7 +252,7 @@ auto shutdown() -> void {
 
 [[nodiscard]] static
 auto update() -> void {
-	if (!api::is_stream_active()) {
+	if (model.current_stream && !api::is_stream_active()) {
 		// If the stream was just stopped, call the stream_stopped callbacks
 		std::unique_lock<std::mutex> lock{model.critical.mutex};
 		auto stopped_cb = model.critical.stream_stopped_cb;
@@ -261,7 +261,7 @@ auto update() -> void {
 		if (stopped_cb) {
 			stopped_cb();
 		}
-		// Close the stream if it's not already closed
+		// Close the stream
 		api::close_stream();
 		model.current_stream = std::nullopt;
 		if (model.pending_stream_request) {
@@ -420,6 +420,7 @@ auto make_request_from_user_config(const bhas::user_config& config) noexcept -> 
 	}
 	catch (const std::exception& e) { impl::model.cb.report({impl::err_exception_caught({__func__}, e.what())}); }
 	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
+	return std::nullopt;
 }
 
 } // bhas
