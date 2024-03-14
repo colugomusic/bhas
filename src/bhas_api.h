@@ -15,8 +15,10 @@ namespace api {
 [[nodiscard]] auto open_stream(bhas::stream_request request, bhas::log* log, bhas::channel_count* num_input_channels) -> bool;
 [[nodiscard]] auto start_stream(bhas::log* log) -> bool;
 auto close_stream() -> void;
+auto init() -> void;
 auto set(audio_cb cb) -> void;
 auto set(stream_stopped_cb cb) -> void;
+auto shutdown() -> void;
 auto stop_stream(bhas::log* log) -> bool;
 
 } // api

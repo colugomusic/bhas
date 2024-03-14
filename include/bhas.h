@@ -114,6 +114,7 @@ struct cb { std::any user; };
 struct stream_request_failure_cb : cb  { auto (*fn)(std::any user, bhas::log log) -> void; };
 struct stream_request_success_cb : cb  { auto (*fn)(std::any user, bhas::log log, bhas::stream stream) -> void; };
 struct stream_stopped_cb : cb          { auto (*fn)(std::any user) -> void; };
+struct stream_starting_cb : cb          { auto (*fn)(std::any user, bhas::stream stream) -> void; };
 
 struct stream_request {
 	std::optional<bhas::device_index> input_device;
@@ -142,6 +143,7 @@ auto request_stream(bhas::stream_request request, bhas::log* log) -> void;
 auto set(audio_cb cb) -> void;
 auto set(stream_request_failure_cb cb) -> void;
 auto set(stream_request_success_cb cb) -> void;
+auto set(stream_starting_cb cb) -> void;
 auto set(stream_stopped_cb cb) -> void;
 auto shutdown() -> void;
 auto stop_stream(bhas::log* log) -> void;

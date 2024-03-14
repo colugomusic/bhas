@@ -212,15 +212,23 @@ auto is_stream_active() -> bool {
 	return Pa_IsStreamActive(model.current_stream->pa_stream) == 1;
 }
 
+auto init() -> void {
+	Pa_Initialize();
+}
+
+auto shutdown() -> void {
+	Pa_Terminate();
+}
+
 auto rescan() -> bhas::system {
 	bhas::system system;
 	const auto api_count    = Pa_GetHostApiCount();
 	const auto device_count = Pa_GetDeviceCount();
 	system.hosts.resize(api_count);
-	system.devices.resize(api_count);
+	system.devices.resize(device_count);
 	for (PaDeviceIndex i = 0; i < device_count; i++) {
 		const auto info                  = Pa_GetDeviceInfo(i);
-		auto& device                     = system.devices[i];
+		auto& device                     = system.devices.at(i);
 		device.index                     = bhas::device_index{static_cast<size_t>(i)};
 		device.name.value                = info->name;
 		device.num_channels.value        = info->maxInputChannels;
@@ -232,7 +240,7 @@ auto rescan() -> bhas::system {
 	}
 	for (PaHostApiIndex i = 0; i < api_count; i++) {
 		const auto info = Pa_GetHostApiInfo(i);
-		auto& host      = system.hosts[i];
+		auto& host      = system.hosts.at(i);
 		host.index      = bhas::host_index{static_cast<size_t>(i)};
 		host.name.value = info->name;
 		host.default_input_device  = bhas::device_index{static_cast<size_t>(info->defaultInputDevice)};
@@ -329,18 +337,21 @@ auto open_stream(bhas::stream_request request, bhas::log* log, bhas::channel_cou
 			log->push_back(info_open_stream_retry());
 			err = try_to_open_pa_stream(request, params, SR, &stream.pa_stream);
 			if (err == paNoError) {
-				log->push_back(info_open_stream_success());
-				stream.host_type      = Pa_GetHostApiInfo(params.output_device_info->hostApi)->type;
-				stream.output_latency = bhas::output_latency{Pa_GetStreamInfo(stream.pa_stream)->outputLatency};
-				stream.sample_rate    = request.sample_rate;
-				*input_channel_count  = bhas::channel_count{static_cast<uint32_t>(params.input_params.channelCount)};
-				model.current_stream  = stream;
-				return true;
+				break;
 			}
 		}
 	}
-	log->push_back(err_stream_open_failed(err));
-	return false;
+	if (err != paNoError) {
+		log->push_back(err_stream_open_failed(err));
+		return false;
+	}
+	log->push_back(info_open_stream_success());
+	stream.host_type      = Pa_GetHostApiInfo(params.output_device_info->hostApi)->type;
+	stream.output_latency = bhas::output_latency{Pa_GetStreamInfo(stream.pa_stream)->outputLatency};
+	stream.sample_rate    = request.sample_rate;
+	*input_channel_count  = bhas::channel_count{static_cast<uint32_t>(params.input_params.channelCount)};
+	model.current_stream  = stream;
+	return true;
 }
 
 auto start_stream(bhas::log* log) -> bool {

@@ -7,6 +7,7 @@
 namespace bhas {
 
 struct Callbacks {
+	bhas::stream_starting_cb stream_starting;
 	bhas::stream_stopped_cb stream_stopped;
 	bhas::stream_request_failure_cb stream_request_failure;
 	bhas::stream_request_success_cb stream_request_success;
@@ -154,6 +155,7 @@ auto get_system(bhas::system_rescan) -> const bhas::system& {
 }
 
 auto init() -> void {
+	api::init();
 	api::set(make_stream_stopped_cb());
 }
 
@@ -176,6 +178,7 @@ auto request_stream(bhas::stream_request request, bhas::log* log) -> void {
 	stream.output_latency      = api::get_output_latency();
 	stream.sample_rate         = request.sample_rate;
 	model.current_stream       = stream;
+	model.cb.stream_starting.fn(model.cb.stream_starting.user, stream);
 	if (!api::start_stream(&local_log)) {
 		model.cb.stream_request_failure.fn(model.cb.stream_request_failure.user, std::move(local_log));
 		return;
@@ -193,6 +196,10 @@ auto set(stream_request_failure_cb cb) -> void {
 
 auto set(stream_request_success_cb cb) -> void {
 	model.cb.stream_request_success = std::move(cb);
+}
+
+auto set(stream_starting_cb cb) -> void {
+	model.cb.stream_starting = std::move(cb);
 }
 
 auto set(stream_stopped_cb cb) -> void {
@@ -224,6 +231,7 @@ auto shutdown() -> void {
 	api::stop_stream(nullptr);
 	std::unique_lock<std::mutex> lock{info.mutex};
 	info.cv.wait(lock, [&] { return info.done; });
+	api::shutdown();
 }
 
 auto update(bhas::log* log) -> void {
@@ -268,7 +276,8 @@ auto make_request_from_user_config(const bhas::user_config& config, bhas::log* l
 		log->push_back(info__couldnt_find_user_output_device(config.output_device_name));
 		request.output_device = user_host.default_output_device;
 	}
-	request.sample_rate = config.sample_rate;
+	request.output_device = *user_output_device_index;
+	request.sample_rate   = config.sample_rate;
 	return api::check_if_supported_or_try_to_fall_back(request, log);
 }
 
