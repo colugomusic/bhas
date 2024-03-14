@@ -167,7 +167,7 @@ auto update() noexcept -> void;
 // Check if the given stream settings are supported by the system.
 // If they're not, we will try various fallback mechanisms and return
 // the updated settings.
-// Information about what we tried is be reported via the report callback.
+// Information about what we tried is reported via the report callback.
 [[nodiscard]] auto check_if_supported_or_try_to_fall_back(bhas::stream_request request) noexcept -> std::optional<bhas::stream_request>;
 
 // Get a reference to the system information. If the system
