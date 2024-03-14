@@ -184,7 +184,7 @@ auto get_system(bhas::system_rescan) -> const bhas::system& {
 	return *model.system;
 }
 
-[[nodiscard]] static
+static
 auto init(callbacks cb) -> void {
 	api::init();
 	api::set(make_stream_stopped_cb());
@@ -196,7 +196,7 @@ auto init(callbacks cb) -> void {
 	model.cb.stream_start_success = std::move(cb.stream_start_success);
 }
 
-[[nodiscard]] static
+static
 auto request_stream(bhas::stream_request request) -> void {
 	if (model.current_stream) {
 		stop_stream_and_request_a_new_one(request);
@@ -228,7 +228,7 @@ auto request_stream(bhas::stream_request request) -> void {
 	model.cb.stream_start_success(std::move(stream));
 }
 
-[[nodiscard]] static
+static
 auto stop_stream() -> void {
 	bhas::log log;
 	std::unique_lock<std::mutex> lock{model.critical.mutex};
@@ -238,7 +238,7 @@ auto stop_stream() -> void {
 	model.cb.report(std::move(log));
 }
 
-[[nodiscard]] static
+static
 auto shutdown() -> void {
 	if (!model.current_stream) {
 		api::shutdown();
@@ -264,7 +264,7 @@ auto shutdown() -> void {
 	api::shutdown();
 }
 
-[[nodiscard]] static
+static
 auto update() -> void {
 	if (model.current_stream && !api::is_stream_active()) {
 		// If the stream was just stopped, call the stream_stopped callbacks
