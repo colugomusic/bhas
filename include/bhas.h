@@ -111,8 +111,9 @@ struct audio_cb {
 
 struct cb { std::any user; };
 
-struct stream_start_failure_cb : cb { auto (*fn)(std::any user, bhas::log log) -> void = nullptr; };
-struct stream_start_success_cb : cb { auto (*fn)(std::any user, bhas::log log, bhas::stream stream) -> void = nullptr; };
+struct report_cb : cb               { auto (*fn)(std::any user, bhas::log log) -> void = nullptr; };
+struct stream_start_failure_cb : cb { auto (*fn)(std::any user) -> void = nullptr; };
+struct stream_start_success_cb : cb { auto (*fn)(std::any user, bhas::stream stream) -> void = nullptr; };
 struct stream_stopped_cb : cb       { auto (*fn)(std::any user) -> void = nullptr; };
 struct stream_starting_cb : cb      { auto (*fn)(std::any user, bhas::stream stream) -> void = nullptr; };
 
@@ -131,6 +132,7 @@ struct user_config {
 
 struct callbacks {
 	audio_cb audio;
+	report_cb report;;
 	stream_start_failure_cb stream_start_failure;
 	stream_start_success_cb stream_start_success;
 	stream_starting_cb stream_starting;
@@ -140,17 +142,17 @@ struct callbacks {
 [[nodiscard]] inline auto is_flag_set(device_flags mask, device_flags::e flag) -> bool { return (mask.value & flag) == flag; }
 [[nodiscard]] inline auto is_flag_set(host_flags mask, host_flags::e flag) -> bool     { return (mask.value & flag) == flag; }
 
-[[nodiscard]] auto check_if_supported_or_try_to_fall_back(bhas::stream_request request, bhas::log* log) -> std::optional<bhas::stream_request>;
+[[nodiscard]] auto check_if_supported_or_try_to_fall_back(bhas::stream_request request) -> std::optional<bhas::stream_request>;
 [[nodiscard]] auto get_cpu_load() -> cpu_load;
 [[nodiscard]] auto get_current_stream() -> std::optional<bhas::stream>;
 [[nodiscard]] auto get_stream_time() -> stream_time;
 [[nodiscard]] auto get_system() -> const bhas::system&;
 [[nodiscard]] auto get_system(bhas::system_rescan) -> const bhas::system&;
-[[nodiscard]] auto make_request_from_user_config(const bhas::user_config& config, bhas::log* log) -> std::optional<bhas::stream_request>;
+[[nodiscard]] auto make_request_from_user_config(const bhas::user_config& config) -> std::optional<bhas::stream_request>;
 auto init(callbacks cb) -> void;
-auto request_stream(bhas::stream_request request, bhas::log* log) -> void;
+auto request_stream(bhas::stream_request request) -> void;
 auto shutdown() -> void;
-auto stop_stream(bhas::log* log) -> void;
-auto update(bhas::log* log) -> void;
+auto stop_stream() -> void;
+auto update() -> void;
 
 } // bhas
