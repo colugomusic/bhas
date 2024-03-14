@@ -57,6 +57,19 @@ auto info__couldnt_find_user_host(bhas::host_name name) -> bhas::info {
 	return {fmt::format("Couldnt' find your saved device host: '{}' so I'm going to try to fall back to the system defaults.", name.value)};
 }
 
+[[nodiscard]] static
+auto info_requesting_stream(const bhas::stream_request& request) -> bhas::info {
+	const auto& system            = get_system();
+	const auto input_device_name  = request.input_device ? system.devices.at(request.input_device->value).name : device_name_view{"none"};
+	const auto output_device_name = system.devices.at(request.output_device.value).name;
+	return {
+		fmt::format(
+			"Requesting stream: input_device: {}, output_device: {}, sample_rate: {}",
+			input_device_name.value,
+			output_device_name.value,
+			request.sample_rate.value)};
+}
+
 template <typename Container, typename PredFn> [[nodiscard]] static
 auto find_item(const Container& container, PredFn&& pred) -> std::optional<size_t> {
 	const auto pos = std::find_if(std::cbegin(container), std::cend(container), pred);
@@ -192,6 +205,7 @@ auto request_stream(bhas::stream_request request) -> void {
 	const auto& system = get_system();
 	bhas::stream stream;
 	bhas::log log;
+	log.push_back(info_requesting_stream(request));
 	if (!api::open_stream(request, &log, &stream.num_input_channels)) {
 		model.cb.report(std::move(log));
 		model.cb.stream_start_failure();
