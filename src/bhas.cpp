@@ -5,6 +5,7 @@
 #include <mutex>
 
 namespace bhas {
+namespace impl {
 
 struct Callbacks {
 	bhas::report_cb report;
@@ -28,6 +29,18 @@ struct Model {
 };
 
 static Model model;
+
+struct function_name { const char* value; };
+
+[[nodiscard]] static
+auto err_exception_caught(function_name func_name, const char* what) -> bhas::error {
+	return {fmt::format("Caught exception in {}: {}", func_name.value, what)};
+}
+
+[[nodiscard]] static
+auto err_exception_caught(function_name func_name) -> bhas::error {
+	return {fmt::format("Caught an unknown exception in {}", func_name.value)};
+}
 
 [[nodiscard]] static
 auto info__couldnt_find_user_input_device(bhas::device_name name) -> bhas::info {
@@ -129,18 +142,22 @@ auto stop_stream_and_request_a_new_one(bhas::stream_request request) -> void {
 	stop_stream();
 }
 
+[[nodiscard]] static
 auto get_cpu_load() -> cpu_load {
 	return api::get_cpu_load();
 }
 
+[[nodiscard]] static
 auto get_current_stream() -> std::optional<bhas::stream> {
 	return model.current_stream;
 }
 
+[[nodiscard]] static
 auto get_stream_time() -> stream_time {
 	return api::get_stream_time();
 }
 
+[[nodiscard]] static
 auto get_system() -> const bhas::system& {
 	if (!model.system) {
 		model.system = api::rescan();
@@ -148,11 +165,13 @@ auto get_system() -> const bhas::system& {
 	return *model.system;
 }
 
+[[nodiscard]] static
 auto get_system(bhas::system_rescan) -> const bhas::system& {
 	model.system = api::rescan();
 	return *model.system;
 }
 
+[[nodiscard]] static
 auto init(callbacks cb) -> void {
 	api::init();
 	api::set(make_stream_stopped_cb());
@@ -164,6 +183,7 @@ auto init(callbacks cb) -> void {
 	model.cb.stream_start_success = std::move(cb.stream_start_success);
 }
 
+[[nodiscard]] static
 auto request_stream(bhas::stream_request request) -> void {
 	if (model.current_stream) {
 		stop_stream_and_request_a_new_one(request);
@@ -194,13 +214,17 @@ auto request_stream(bhas::stream_request request) -> void {
 	model.cb.stream_start_success(std::move(stream));
 }
 
+[[nodiscard]] static
 auto stop_stream() -> void {
 	bhas::log log;
+	std::unique_lock<std::mutex> lock{model.critical.mutex};
+	model.critical.stream_stopped_cb = std::move(model.cb.stream_stopped);
+	lock.unlock();
 	api::stop_stream(&log);
 	model.cb.report(std::move(log));
 }
 
-// Stop current stream and block until finished
+[[nodiscard]] static
 auto shutdown() -> void {
 	if (!model.current_stream) {
 		api::shutdown();
@@ -226,6 +250,7 @@ auto shutdown() -> void {
 	api::shutdown();
 }
 
+[[nodiscard]] static
 auto update() -> void {
 	if (!api::is_stream_active()) {
 		// If the stream was just stopped, call the stream_stopped callbacks
@@ -241,12 +266,13 @@ auto update() -> void {
 		model.current_stream = std::nullopt;
 		if (model.pending_stream_request) {
 			// If another stream request is pending, request the stream
-			request_stream(*model.pending_stream_request);
+			impl::request_stream(*model.pending_stream_request);
 			model.pending_stream_request = std::nullopt;
 		}
 	}
 }
 
+[[nodiscard]] static
 auto check_if_supported_or_try_to_fall_back(bhas::stream_request request) -> std::optional<bhas::stream_request> {
 	bhas::log log;
 	auto supported_request = api::check_if_supported_or_try_to_fall_back(request, &log);
@@ -254,9 +280,10 @@ auto check_if_supported_or_try_to_fall_back(bhas::stream_request request) -> std
 	return supported_request;
 }
 
+[[nodiscard]] static
 auto make_request_from_user_config(const bhas::user_config& config) -> std::optional<bhas::stream_request> {
 	const auto& system = get_system();
-	const auto user_host_index = bhas::find_host(system, config.host_name);
+	const auto user_host_index = find_host(system, config.host_name);
 	bhas::stream_request request;
 	bhas::log log;
 	if (!user_host_index) {
@@ -268,8 +295,8 @@ auto make_request_from_user_config(const bhas::user_config& config) -> std::opti
 		return request;
 	}
 	const auto user_host                = system.hosts.at(user_host_index->value);
-	const auto user_input_device_index  = bhas::find_input_device(system, *user_host_index, config.input_device_name);
-	const auto user_output_device_index = bhas::find_output_device(system, *user_host_index, config.output_device_name);
+	const auto user_input_device_index  = find_input_device(system, *user_host_index, config.input_device_name);
+	const auto user_output_device_index = find_output_device(system, *user_host_index, config.output_device_name);
 	if (!user_input_device_index) {
 		log.push_back(info__couldnt_find_user_input_device(config.input_device_name));
 		request.input_device = user_host.default_input_device;
@@ -286,7 +313,113 @@ auto make_request_from_user_config(const bhas::user_config& config) -> std::opti
 	}
 	request.sample_rate = config.sample_rate;
 	model.cb.report(std::move(log));
-	return check_if_supported_or_try_to_fall_back(request);
+	return bhas::check_if_supported_or_try_to_fall_back(request);
+}
+
+} // impl
+
+auto get_cpu_load() noexcept -> cpu_load {
+	try {
+		return impl::get_cpu_load();
+	}
+	catch (const std::exception& e) { impl::model.cb.report({impl::err_exception_caught({__func__}, e.what())}); }
+	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
+	return {0};
+}
+
+auto get_current_stream() noexcept -> std::optional<bhas::stream> {
+	try {
+		return impl::get_current_stream();
+	}
+	catch (const std::exception& e) { impl::model.cb.report({impl::err_exception_caught({__func__}, e.what())}); }
+	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
+	return std::nullopt;
+}
+
+auto get_stream_time() noexcept -> stream_time {
+	try {
+		return impl::get_stream_time();
+	}
+	catch (const std::exception& e) { impl::model.cb.report({impl::err_exception_caught({__func__}, e.what())}); }
+	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
+	return {0};
+}
+
+auto get_system() noexcept -> const bhas::system& {
+	try {
+		return impl::get_system();
+	}
+	catch (const std::exception& e) { impl::model.cb.report({impl::err_exception_caught({__func__}, e.what())}); }
+	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
+	static const auto NULL_SYSTEM = bhas::system{};
+	return NULL_SYSTEM;
+}
+
+auto get_system(bhas::system_rescan) noexcept -> const bhas::system& {
+	try {
+		return impl::get_system(bhas::system_rescan{});
+	}
+	catch (const std::exception& e) { impl::model.cb.report({impl::err_exception_caught({__func__}, e.what())}); }
+	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
+	static const auto NULL_SYSTEM = bhas::system{};
+	return NULL_SYSTEM;
+}
+
+auto init(callbacks cb) noexcept -> void {
+	try {
+		impl::init(std::move(cb));
+	}
+	catch (const std::exception& e) { impl::model.cb.report({impl::err_exception_caught({__func__}, e.what())}); }
+	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
+}
+
+auto request_stream(bhas::stream_request request) noexcept -> void {
+	try {
+		impl::request_stream(std::move(request));
+	}
+	catch (const std::exception& e) { impl::model.cb.report({impl::err_exception_caught({__func__}, e.what())}); }
+	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
+}
+
+auto stop_stream() noexcept -> void {
+	try {
+		impl::stop_stream();
+	}
+	catch (const std::exception& e) { impl::model.cb.report({impl::err_exception_caught({__func__}, e.what())}); }
+	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
+}
+
+auto shutdown() noexcept -> void {
+	try {
+		impl::shutdown();
+	}
+	catch (const std::exception& e) { impl::model.cb.report({impl::err_exception_caught({__func__}, e.what())}); }
+	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
+}
+
+auto update() noexcept -> void {
+	try {
+		impl::update();
+	}
+	catch (const std::exception& e) { impl::model.cb.report({impl::err_exception_caught({__func__}, e.what())}); }
+	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
+}
+
+auto check_if_supported_or_try_to_fall_back(bhas::stream_request request) noexcept -> std::optional<bhas::stream_request> {
+	try {
+		return impl::check_if_supported_or_try_to_fall_back(std::move(request));
+	}
+	catch (const std::exception& e) { impl::model.cb.report({impl::err_exception_caught({__func__}, e.what())}); }
+	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
+	return std::nullopt;
+}
+
+auto make_request_from_user_config(const bhas::user_config& config) noexcept -> std::optional<bhas::stream_request> {
+	try {
+		return impl::make_request_from_user_config(config);
+	}
+	catch (const std::exception& e) { impl::model.cb.report({impl::err_exception_caught({__func__}, e.what())}); }
+	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
 }
 
 } // bhas

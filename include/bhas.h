@@ -126,27 +126,72 @@ struct user_config {
 
 struct callbacks {
 	audio_cb audio;
-	report_cb report;;
+	report_cb report;
 	stream_start_failure_cb stream_start_failure;
 	stream_start_success_cb stream_start_success;
 	stream_starting_cb stream_starting;
 	stream_stopped_cb stream_stopped;
 };
 
-[[nodiscard]] inline auto is_flag_set(device_flags mask, device_flags::e flag) -> bool { return (mask.value & flag) == flag; }
-[[nodiscard]] inline auto is_flag_set(host_flags mask, host_flags::e flag) -> bool     { return (mask.value & flag) == flag; }
+// Call this before anything else
+// Every callback needs to be set.
+// Only the audio callback is called in the audio thread.
+// Everything else is called in the main thread.
+auto init(callbacks cb) noexcept -> void;
 
-[[nodiscard]] auto check_if_supported_or_try_to_fall_back(bhas::stream_request request) -> std::optional<bhas::stream_request>;
-[[nodiscard]] auto get_cpu_load() -> cpu_load;
-[[nodiscard]] auto get_current_stream() -> std::optional<bhas::stream>;
-[[nodiscard]] auto get_stream_time() -> stream_time;
-[[nodiscard]] auto get_system() -> const bhas::system&;
-[[nodiscard]] auto get_system(bhas::system_rescan) -> const bhas::system&;
-[[nodiscard]] auto make_request_from_user_config(const bhas::user_config& config) -> std::optional<bhas::stream_request>;
-auto init(callbacks cb) -> void;
-auto request_stream(bhas::stream_request request) -> void;
-auto shutdown() -> void;
-auto stop_stream() -> void;
-auto update() -> void;
+// Call this to shut down the audio system.
+// If a stream is currently active, this will block until it has finished.
+// The stream_stopped callback will NOT be called.
+auto shutdown() noexcept -> void;
+
+// Asynchronously request a stream with the given settings.
+// This will return immediately.
+// If a stream is currently active, it is stopped automatically and the
+// new stream request will be queued until the old one has finished.
+auto request_stream(bhas::stream_request request) noexcept -> void;
+
+// Asynchronously stop the stream.
+// This will return immediately.
+// The stream_stopped callback will be called in the main thread when
+// the stream has finished.
+auto stop_stream() noexcept -> void;
+
+// Keep calling this at regular intervals, in your main thread.
+// If there is a pending stream_stopped callback to call, this is
+// where that will happen.
+// If there is a pending stream request, this is where that will
+// be done.
+auto update() noexcept -> void;
+
+// Check if the given stream settings are supported by the system.
+// If they're not, we will try various fallback mechanisms and return
+// the updated settings.
+// Information about what we try will be reported via the report callback.
+[[nodiscard]] auto check_if_supported_or_try_to_fall_back(bhas::stream_request request) noexcept -> std::optional<bhas::stream_request>;
+
+// Get a reference to the system information. If the system
+// has never been scanned yet, it will happen automatically.
+[[nodiscard]] auto get_system() noexcept -> const bhas::system&;
+
+// Get a reference to the system information.
+// Forces a rescan of all available audio devices.
+[[nodiscard]] auto get_system(bhas::system_rescan) noexcept -> const bhas::system&;
+
+// Tries to generate a stream_request from the give user_config.
+// This searches for devices matching the given names.
+[[nodiscard]] auto make_request_from_user_config(const bhas::user_config& config) noexcept -> std::optional<bhas::stream_request>;
+
+// Get the current CPU load.
+[[nodiscard]] auto get_cpu_load() noexcept -> cpu_load;
+
+// Get the current stream if there is one.
+[[nodiscard]] auto get_current_stream() noexcept -> std::optional<bhas::stream>;
+
+// Get the current stream time.
+[[nodiscard]] auto get_stream_time() noexcept -> stream_time;
+
+// Utilities
+[[nodiscard]] inline auto is_flag_set(device_flags mask, device_flags::e flag) noexcept -> bool { return (mask.value & flag) == flag; }
+[[nodiscard]] inline auto is_flag_set(host_flags mask, host_flags::e flag) noexcept -> bool     { return (mask.value & flag) == flag; }
 
 } // bhas
