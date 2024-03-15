@@ -6,14 +6,16 @@ static constexpr auto NUM_OUTPUT_CHANNELS  = 2;
 static constexpr auto START_STREAM_TIMEOUT = std::chrono::seconds(5);
 static constexpr auto STOP_STREAM_TIMEOUT  = std::chrono::seconds(5);
 
-auto default_report(bhas::error item) -> void { FAIL_CHECK(item.value); }
-auto default_report(bhas::info item) -> void { MESSAGE(item.value); }
+auto default_report(bhas::error item) -> void   { FAIL_CHECK(item.value); }
+auto default_report(bhas::info item) -> void    { MESSAGE(item.value); }
 auto default_report(bhas::warning item) -> void { WARN(item.value.c_str()); }
 
+auto default_report(bhas::log_item item) -> void {
+	std::visit([](auto&& item) -> void { default_report(std::move(item)); }, std::move(item));
+}
+
 auto default_report(bhas::log log) -> void {
-	for (auto&& item : log) {
-		std::visit([](auto&& item) -> void { default_report(std::move(item)); }, std::move(item));
-	}
+	for (auto&& item : log) { default_report(std::move(item)); }
 }
 
 auto make_default_audio_cb() -> bhas::audio_cb {
