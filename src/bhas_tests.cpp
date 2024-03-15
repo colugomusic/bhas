@@ -2,18 +2,9 @@
 #include "bhas.h"
 #include "doctest.h"
 
-static constexpr auto NUM_OUTPUT_CHANNELS = 2;
-
-auto make_empty_report_cb() -> bhas::report_cb {
-	return [](bhas::log log) -> void {
-	};
-}
-
-auto make_single_buffer_audio_cb() -> bhas::audio_cb {
-	return [](bhas::input_buffer input, bhas::output_buffer output, bhas::frame_count frame_count, bhas::sample_rate sample_rate, bhas::output_latency output_latency, const bhas::time_info* time_info) -> bhas::callback_result {
-		return bhas::callback_result::complete;
-	};
-}
+static constexpr auto NUM_OUTPUT_CHANNELS  = 2;
+static constexpr auto START_STREAM_TIMEOUT = std::chrono::seconds(5);
+static constexpr auto STOP_STREAM_TIMEOUT  = std::chrono::seconds(5);
 
 auto default_report(bhas::error item) -> void { FAIL_CHECK(item.value); }
 auto default_report(bhas::info item) -> void { MESSAGE(item.value); }
@@ -42,7 +33,7 @@ auto make_default_report_cb() -> bhas::report_cb {
 	};
 }
 
-TEST_CASE("default audio stream test") {
+TEST_CASE("start and stop the system default audio stream") {
 	struct {
 		std::mutex mutex;
 		std::condition_variable cv;
@@ -85,7 +76,7 @@ TEST_CASE("default audio stream test") {
 	request.sample_rate   = system.devices.at(request.output_device.value).default_sample_rate;
 	bhas::request_stream(request);
 	std::unique_lock<std::mutex> lock{critical.mutex};
-	critical.cv.wait_for(lock, std::chrono::seconds(5), [&critical]() -> bool { return critical.stream_start_success || critical.stream_start_failure; });
+	critical.cv.wait_for(lock, START_STREAM_TIMEOUT, [&critical]() -> bool { return critical.stream_start_success || critical.stream_start_failure; });
 	if (!(critical.stream_start_success || critical.stream_start_failure)) {
 		FAIL("Timed out while waiting for the stream to start");
 	}
@@ -97,7 +88,7 @@ TEST_CASE("default audio stream test") {
 	lock.unlock();
 	bhas::stop_stream();
 	lock.lock();
-	critical.cv.wait_for(lock, std::chrono::seconds(5), [&critical]() -> bool { return critical.stream_stopped; });
+	critical.cv.wait_for(lock, STOP_STREAM_TIMEOUT, [&critical]() -> bool { return critical.stream_stopped; });
 	if (!critical.stream_stopped) {
 		FAIL("Timed out while waiting for the stream to stop");
 	}
