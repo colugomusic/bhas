@@ -1,6 +1,8 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "bhas.h"
 #include "doctest.h"
+#include <condition_variable>
+#include <mutex>
 
 static constexpr auto NUM_OUTPUT_CHANNELS  = 2;
 static constexpr auto START_STREAM_TIMEOUT = std::chrono::seconds(5);
