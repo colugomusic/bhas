@@ -395,8 +395,8 @@ auto set(stream_stopped_cb cb) -> void {
 
 auto stop_stream(bhas::log* log) -> bool {
 	if (!is_stream_active()) {
-		if (log) log->push_back(err_failed_to_stop_stream("The stream isn't active."));
-		return false;
+		model.cb.stream_stopped();
+		return true;
 	}
 	PaError err;
 	if (model.current_stream->host_type == paDirectSound) {

@@ -18,6 +18,7 @@ struct Callbacks {
 struct Critical {
 	std::mutex mutex;
 	bhas::stream_stopped_cb stream_stopped_cb;
+	bool just_stopped = false;
 };
 
 struct Model {
@@ -142,6 +143,7 @@ auto make_stream_stopped_cb() -> bhas::stream_stopped_cb {
 		std::unique_lock<std::mutex> lock{model.critical.mutex};
 		auto stopped_cb = model.critical.stream_stopped_cb;
 		model.critical.stream_stopped_cb = {};
+		model.critical.just_stopped = true;
 		lock.unlock();
 		if (stopped_cb) {
 			stopped_cb();
@@ -235,10 +237,10 @@ auto request_stream(bhas::stream_request request) -> void {
 
 static
 auto stop_stream() -> void {
-	bhas::log log;
 	std::unique_lock<std::mutex> lock{model.critical.mutex};
-	model.critical.stream_stopped_cb = std::move(model.cb.stream_stopped);
+	model.critical.stream_stopped_cb = model.cb.stream_stopped;
 	lock.unlock();
+	bhas::log log;
 	api::stop_stream(&log);
 	model.cb.report(std::move(log));
 }
@@ -275,9 +277,13 @@ auto shutdown() -> void {
 
 static
 auto update() -> void {
-	if (model.current_stream && !api::is_stream_active()) {
+	if (!model.current_stream) {
+		return;
+	}
+	std::unique_lock<std::mutex> lock{model.critical.mutex};
+	if (model.critical.just_stopped) {
+		model.critical.just_stopped = false;
 		// If the stream was just stopped, call the stream_stopped callbacks
-		std::unique_lock<std::mutex> lock{model.critical.mutex};
 		auto stopped_cb = model.critical.stream_stopped_cb;
 		model.critical.stream_stopped_cb = {};
 		lock.unlock();
