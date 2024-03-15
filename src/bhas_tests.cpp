@@ -24,7 +24,7 @@ auto make_default_audio_cb() -> bhas::audio_cb {
 	return [](bhas::input_buffer input, bhas::output_buffer output, bhas::frame_count frame_count, bhas::sample_rate sample_rate, bhas::output_latency output_latency, const bhas::time_info* time_info) -> bhas::callback_result {
 		for (uint32_t i = 0; i < frame_count.value; ++i) {
 			for (auto j = 0; j < NUM_OUTPUT_CHANNELS; ++j) {
-				output.buffer[i][j] = 0.0f;
+				output.buffer[j][i] = 0.0f;
 			}
 		}
 		return bhas::callback_result::complete;
