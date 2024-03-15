@@ -211,8 +211,12 @@ auto is_stream_active() -> bool {
 	return Pa_IsStreamActive(model.current_stream->pa_stream) == 1;
 }
 
-auto init() -> void {
-	Pa_Initialize();
+auto init(bhas::log* log) -> bool {
+	if (const auto err = Pa_Initialize(); err != paNoError) {
+		log->push_back(bhas::error{fmt::format("Failed to initialize PortAudio. ({})", Pa_GetErrorText(err))});
+		return false;
+	}
+	return true;
 }
 
 auto shutdown() -> void {

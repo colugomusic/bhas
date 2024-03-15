@@ -137,7 +137,10 @@ struct callbacks {
 // Every callback needs to be set.
 // Only the audio callback is called in the audio thread.
 // Everything else is called in the main thread.
-auto init(callbacks cb) noexcept -> void;
+// If something goes wrong during intialization, the report
+// callback you pass in here will be used immediately and
+// false will be returned.
+auto init(callbacks cb) noexcept -> bool;
 
 // Call this to shut down the audio system.
 // If a stream is currently active, this will block until it has finished.

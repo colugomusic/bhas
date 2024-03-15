@@ -10,12 +10,12 @@ namespace api {
 [[nodiscard]] auto get_cpu_load() -> cpu_load;
 [[nodiscard]] auto get_output_latency() -> bhas::output_latency;
 [[nodiscard]] auto get_stream_time() -> stream_time;
+[[nodiscard]] auto init(bhas::log* log) -> bool;
 [[nodiscard]] auto is_stream_active() -> bool;
-[[nodiscard]] auto rescan() -> bhas::system;
 [[nodiscard]] auto open_stream(bhas::stream_request request, bhas::log* log, bhas::channel_count* num_input_channels) -> bool;
+[[nodiscard]] auto rescan() -> bhas::system;
 [[nodiscard]] auto start_stream(bhas::log* log) -> bool;
 auto close_stream() -> void;
-auto init() -> void;
 auto set(audio_cb cb) -> void;
 auto set(stream_stopped_cb cb) -> void;
 auto shutdown() -> void;

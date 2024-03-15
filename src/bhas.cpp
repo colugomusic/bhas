@@ -185,15 +185,20 @@ auto get_system(bhas::system_rescan) -> const bhas::system& {
 }
 
 static
-auto init(callbacks cb) -> void {
-	api::init();
+auto init(callbacks cb) -> bool {
+	model.cb.report = std::move(cb.report);
+	bhas::log log;
+	if (!api::init(&log)) {
+		model.cb.report(std::move(log));
+		return false;
+	}
 	api::set(make_stream_stopped_cb());
 	api::set(std::move(cb.audio));
-	model.cb.report               = std::move(cb.report);
 	model.cb.stream_starting      = std::move(cb.stream_starting);
 	model.cb.stream_stopped       = std::move(cb.stream_stopped);
 	model.cb.stream_start_failure = std::move(cb.stream_start_failure);
 	model.cb.stream_start_success = std::move(cb.stream_start_success);
+	return true;
 }
 
 static
@@ -241,6 +246,10 @@ auto stop_stream() -> void {
 static
 auto shutdown() -> void {
 	if (!model.current_stream) {
+		api::shutdown();
+		return;
+	}
+	if (!api::is_stream_active()) {
 		api::shutdown();
 		return;
 	}
@@ -379,12 +388,14 @@ auto get_system(bhas::system_rescan) noexcept -> const bhas::system& {
 	return NULL_SYSTEM;
 }
 
-auto init(callbacks cb) noexcept -> void {
+auto init(callbacks cb) noexcept -> bool {
 	try {
 		impl::init(std::move(cb));
+		return true;
 	}
 	catch (const std::exception& e) { impl::model.cb.report({impl::err_exception_caught({__func__}, e.what())}); }
 	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
+	return false;
 }
 
 auto request_stream(bhas::stream_request request) noexcept -> void {
