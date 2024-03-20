@@ -3,6 +3,7 @@
 #include "doctest.h"
 #include <condition_variable>
 #include <mutex>
+#include <thread>
 
 static constexpr auto NUM_OUTPUT_CHANNELS  = 2;
 static constexpr auto START_STREAM_TIMEOUT = std::chrono::seconds(5);
@@ -129,6 +130,7 @@ TEST_CASE("start and stop the system default audio stream") {
 	request.output_device = system.default_output_device;
 	request.sample_rate   = system.devices.at(request.output_device.value).default_sample_rate;
 	if (!try_to_open_stream(request, &critical)) {
+		FAIL_CHECK("failed to start an audio stream with the default settings");
 		bhas::shutdown();
 		return;
 	}
