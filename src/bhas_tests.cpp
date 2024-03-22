@@ -1,8 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "bhas.h"
 #include "doctest.h"
-#include <condition_variable>
-#include <mutex>
 #include <thread>
 
 static constexpr auto NUM_OUTPUT_CHANNELS  = 2;
@@ -45,27 +43,18 @@ struct Tracking {
 	int stream_stop_count          = 0;
 };
 
-struct Critical {
-	std::mutex mutex;
-	Tracking tracking;
-};
-
-auto try_to_open_stream(bhas::stream_request request, Critical* critical) -> bool {
-	std::unique_lock<std::mutex> lock{critical->mutex};
-	auto old_state = critical->tracking;
-	lock.unlock();
+auto try_to_open_stream(bhas::stream_request request, Tracking* tracking) -> bool {
+	auto old_state = *tracking;
 	bhas::request_stream(request);
 	const auto start_time = std::chrono::system_clock::now();
 	for (;;) {
 		bhas::update();
-		lock.lock();
-		if (critical->tracking.stream_start_success_count > old_state.stream_start_success_count) {
+		if (tracking->stream_start_success_count > old_state.stream_start_success_count) {
 			return true;
 		}
-		if (critical->tracking.stream_start_fail_count > old_state.stream_start_fail_count) {
+		if (tracking->stream_start_fail_count > old_state.stream_start_fail_count) {
 			return false;
 		}
-		lock.unlock();
 		const auto now = std::chrono::system_clock::now();
 		if (now - start_time > START_STREAM_TIMEOUT) {
 			FAIL("Timed out while waiting for the stream to start");
@@ -75,19 +64,15 @@ auto try_to_open_stream(bhas::stream_request request, Critical* critical) -> boo
 	}
 }
 
-auto try_to_stop_stream(Critical* critical) -> bool {
-	std::unique_lock<std::mutex> lock{critical->mutex};
-	auto old_state = critical->tracking;
-	lock.unlock();
+auto try_to_stop_stream(Tracking* tracking) -> bool {
+	auto old_state = *tracking;
 	bhas::stop_stream();
 	const auto start_time = std::chrono::system_clock::now();
 	for (;;) {
 		bhas::update();
-		lock.lock();
-		if (critical->tracking.stream_stop_count > old_state.stream_stop_count) {
+		if (tracking->stream_stop_count > old_state.stream_stop_count) {
 			return true;
 		}
-		lock.unlock();
 		const auto now = std::chrono::system_clock::now();
 		if (now - start_time > STOP_STREAM_TIMEOUT) {
 			FAIL("Timed out while waiting for the stream to stop");
@@ -98,26 +83,23 @@ auto try_to_stop_stream(Critical* critical) -> bool {
 }
 
 TEST_CASE("start and stop the system default audio stream") {
-	Critical critical;
+	Tracking tracking;
 	bhas::callbacks cb;
 	cb.audio = make_default_audio_cb();
 	cb.report = make_default_report_cb();
 	cb.stream_starting = [](bhas::stream stream) -> void {
 		MESSAGE("stream starting");
 	};
-	cb.stream_start_failure = [&critical]() -> void {
-		std::unique_lock<std::mutex> lock{critical.mutex};
-		critical.tracking.stream_start_fail_count++;
+	cb.stream_start_failure = [&tracking]() -> void {
+		tracking.stream_start_fail_count++;
 		MESSAGE("stream failed to start");
 	};
-	cb.stream_start_success = [&critical](bhas::stream stream) -> void {
-		std::unique_lock<std::mutex> lock{critical.mutex};
-		critical.tracking.stream_start_success_count++;
+	cb.stream_start_success = [&tracking](bhas::stream stream) -> void {
+		tracking.stream_start_success_count++;
 		MESSAGE("stream started successfully");
 	};
-	cb.stream_stopped = [&critical]() -> void {
-		std::unique_lock<std::mutex> lock{critical.mutex};
-		critical.tracking.stream_stop_count++;
+	cb.stream_stopped = [&tracking]() -> void {
+		tracking.stream_stop_count++;
 		MESSAGE("stream stopped");
 	};
 	if (!bhas::init(std::move(cb))) {
@@ -129,7 +111,7 @@ TEST_CASE("start and stop the system default audio stream") {
 	request.input_device  = system.default_input_device;
 	request.output_device = system.default_output_device;
 	request.sample_rate   = system.devices.at(request.output_device.value).default_sample_rate;
-	if (!try_to_open_stream(request, &critical)) {
+	if (!try_to_open_stream(request, &tracking)) {
 		FAIL_CHECK("failed to start an audio stream with the default settings");
 		bhas::shutdown();
 		return;
@@ -138,12 +120,12 @@ TEST_CASE("start and stop the system default audio stream") {
 		const bhas::sample_rate sample_rates[] = {22050, 44100, 48000, 96000};
 		for (auto SR : sample_rates) {
 			request.sample_rate = SR;
-			if (!try_to_open_stream(request, &critical)) {
+			if (!try_to_open_stream(request, &tracking)) {
 				FAIL_CHECK("failed to switch sample rate");
 			}
 		}
 	}
-	if (!try_to_stop_stream(&critical)) {
+	if (!try_to_stop_stream(&tracking)) {
 		FAIL("failed to stop the audio stream");
 	}
 	bhas::shutdown();
