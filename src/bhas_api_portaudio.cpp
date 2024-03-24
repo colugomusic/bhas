@@ -246,8 +246,12 @@ auto rescan() -> bhas::system {
 		auto& host      = system.hosts.at(i);
 		host.index      = bhas::host_index{static_cast<size_t>(i)};
 		host.name.value = info->name;
-		host.default_input_device  = bhas::device_index{static_cast<size_t>(info->defaultInputDevice)};
-		host.default_output_device = bhas::device_index{static_cast<size_t>(info->defaultOutputDevice)};
+		if (info->defaultInputDevice != paNoDevice) {
+			host.default_input_device = bhas::device_index{static_cast<size_t>(info->defaultInputDevice)};
+		}
+		if (info->defaultOutputDevice != paNoDevice) {
+			host.default_output_device = bhas::device_index{static_cast<size_t>(info->defaultOutputDevice)};
+		}
 		if (info->type == paASIO) { host.flags.value |= bhas::host_flags::asio; }
 		for (const auto& device : system.devices) {
 			if (device.host.value == host.index.value) {

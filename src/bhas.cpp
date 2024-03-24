@@ -54,6 +54,11 @@ auto info__couldnt_find_user_output_device(bhas::device_name name) -> bhas::info
 }
 
 [[nodiscard]] static
+auto info__no_default_output_device() -> bhas::info {
+	return {"There isn't one!"};
+}
+
+[[nodiscard]] static
 auto info__couldnt_find_user_host(bhas::host_name name) -> bhas::info {
 	return {fmt::format("Couldnt' find your saved device host: '{}' so I'm going to try to fall back to the system defaults.", name.value)};
 }
@@ -335,7 +340,11 @@ auto make_request_from_user_config(const bhas::user_config& config) -> std::opti
 	}
 	if (!user_output_device_index) {
 		log.push_back(info__couldnt_find_user_output_device(config.output_device_name));
-		request.output_device = user_host.default_output_device;
+		if (!user_host.default_output_device) {
+			log.push_back(info__no_default_output_device());
+			return std::nullopt;
+		}
+		request.output_device = *user_host.default_output_device;
 	}
 	else {
 		request.output_device = *user_output_device_index;

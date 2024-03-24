@@ -75,7 +75,7 @@ struct host {
 	host_flags flags;
 	std::vector<device_index> devices;
 	std::optional<device_index> default_input_device;
-	device_index default_output_device;
+	std::optional<device_index> default_output_device;
 };
 
 struct system {
