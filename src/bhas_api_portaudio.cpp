@@ -104,7 +104,7 @@ auto stream_audio_callback(
 {
 	const auto input_buffer   = bhas::input_buffer{reinterpret_cast<float const * const *>(input)};
 	const auto output_buffer  = bhas::output_buffer{reinterpret_cast<float * const *>(output)};
-	const auto frame_count    = bhas::frame_count{pa_frame_count};
+	const auto frame_count    = bhas::frame_count{static_cast<uint32_t>(pa_frame_count)};
 	const auto sample_rate    = model.current_stream->sample_rate;
 	const auto output_latency = model.current_stream->output_latency;
 	bhas::time_info time_info;
