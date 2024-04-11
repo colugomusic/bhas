@@ -463,4 +463,12 @@ auto make_request_from_user_config(const bhas::user_config& config) noexcept -> 
 	return std::nullopt;
 }
 
+namespace jack {
+
+auto set_client_name(std::string_view name) noexcept -> void {
+	api::jack::set_client_name(name);
+}
+
+} // jack
+
 } // bhas

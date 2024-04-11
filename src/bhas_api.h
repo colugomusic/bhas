@@ -21,5 +21,11 @@ auto set(stream_stopped_cb cb) -> void;
 auto shutdown() -> void;
 auto stop_stream(bhas::log* log) -> bool;
 
+namespace jack {
+
+auto set_client_name(std::string_view name) -> void;
+
+} // jack
+
 } // api
 } // bhas

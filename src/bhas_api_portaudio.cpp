@@ -7,6 +7,9 @@
 #include <pa_asio.h>
 #include <pa_win_wasapi.h>
 #endif
+#ifdef PA_USE_JACK
+#include <pa_jack.h>
+#endif
 
 namespace bhas {
 namespace api {
@@ -430,5 +433,14 @@ auto stop_stream(bhas::log* log) -> bool {
 	return true;
 }
 
+namespace jack {
+
+auto set_client_name(std::string_view name) -> void {
+#if PA_USE_JACK
+	PaJack_SetClientName(name.data());
+#endif
+}
+
+} // jack
 } // api
 } // bhas

@@ -199,4 +199,11 @@ auto update() noexcept -> void;
 [[nodiscard]] inline auto is_flag_set(device_flags mask, device_flags::e flag) noexcept -> bool { return (mask.value & flag) == flag; }
 [[nodiscard]] inline auto is_flag_set(host_flags mask, host_flags::e flag) noexcept -> bool     { return (mask.value & flag) == flag; }
 
+namespace jack {
+
+// Must be called before bhas::init, to set the name of the JACK client.
+auto set_client_name(std::string_view name) noexcept -> void;
+
+} // jack
+
 } // bhas
