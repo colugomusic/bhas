@@ -191,6 +191,12 @@ auto get_system(bhas::system_rescan) -> const bhas::system& {
 	return *model.system;
 }
 
+[[nodiscard]] static
+auto did_stream_just_stop() -> bool {
+	auto lock = std::unique_lock<std::mutex>(model.critical.mutex);
+	return model.critical.just_stopped;
+}
+
 static
 auto init(callbacks cb) -> bool {
 	model.cb.report = std::move(cb.report);
@@ -356,7 +362,7 @@ auto make_request_from_user_config(const bhas::user_config& config) -> std::opti
 
 } // impl
 
-auto get_cpu_load() noexcept -> cpu_load {
+auto get_cpu_load() -> cpu_load {
 	try {
 		return impl::get_cpu_load();
 	}
@@ -365,7 +371,7 @@ auto get_cpu_load() noexcept -> cpu_load {
 	return {0};
 }
 
-auto get_current_stream() noexcept -> std::optional<bhas::stream> {
+auto get_current_stream() -> std::optional<bhas::stream> {
 	try {
 		return impl::get_current_stream();
 	}
@@ -374,7 +380,7 @@ auto get_current_stream() noexcept -> std::optional<bhas::stream> {
 	return std::nullopt;
 }
 
-auto get_stream_time() noexcept -> stream_time {
+auto get_stream_time() -> stream_time {
 	try {
 		return impl::get_stream_time();
 	}
@@ -383,7 +389,7 @@ auto get_stream_time() noexcept -> stream_time {
 	return {0};
 }
 
-auto get_system() noexcept -> const bhas::system& {
+auto get_system() -> const bhas::system& {
 	try {
 		return impl::get_system();
 	}
@@ -393,7 +399,7 @@ auto get_system() noexcept -> const bhas::system& {
 	return NULL_SYSTEM;
 }
 
-auto get_system(bhas::system_rescan) noexcept -> const bhas::system& {
+auto get_system(bhas::system_rescan) -> const bhas::system& {
 	try {
 		return impl::get_system(bhas::system_rescan{});
 	}
@@ -403,7 +409,16 @@ auto get_system(bhas::system_rescan) noexcept -> const bhas::system& {
 	return NULL_SYSTEM;
 }
 
-auto init(callbacks cb) noexcept -> bool {
+auto did_stream_just_stop() -> bool {
+	try {
+		return impl::did_stream_just_stop();
+	}
+	catch (const std::exception& e) { impl::model.cb.report({impl::err_exception_caught({__func__}, e.what())}); }
+	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
+	return false;
+}
+
+auto init(callbacks cb) -> bool {
 	try {
 		impl::init(std::move(cb));
 		return true;
@@ -413,7 +428,7 @@ auto init(callbacks cb) noexcept -> bool {
 	return false;
 }
 
-auto request_stream(bhas::stream_request request) noexcept -> void {
+auto request_stream(bhas::stream_request request) -> void {
 	try {
 		impl::request_stream(std::move(request));
 	}
@@ -421,7 +436,7 @@ auto request_stream(bhas::stream_request request) noexcept -> void {
 	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
 }
 
-auto stop_stream() noexcept -> void {
+auto stop_stream() -> void {
 	try {
 		impl::stop_stream();
 	}
@@ -429,7 +444,7 @@ auto stop_stream() noexcept -> void {
 	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
 }
 
-auto shutdown() noexcept -> void {
+auto shutdown() -> void {
 	try {
 		impl::shutdown();
 	}
@@ -437,7 +452,7 @@ auto shutdown() noexcept -> void {
 	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
 }
 
-auto update() noexcept -> void {
+auto update() -> void {
 	try {
 		impl::update();
 	}
@@ -445,7 +460,7 @@ auto update() noexcept -> void {
 	catch (...)                     { impl::model.cb.report({impl::err_exception_caught({__func__})}); }
 }
 
-auto check_if_supported_or_try_to_fall_back(bhas::stream_request request) noexcept -> std::optional<bhas::stream_request> {
+auto check_if_supported_or_try_to_fall_back(bhas::stream_request request) -> std::optional<bhas::stream_request> {
 	try {
 		return impl::check_if_supported_or_try_to_fall_back(std::move(request));
 	}
@@ -454,7 +469,7 @@ auto check_if_supported_or_try_to_fall_back(bhas::stream_request request) noexce
 	return std::nullopt;
 }
 
-auto make_request_from_user_config(const bhas::user_config& config) noexcept -> std::optional<bhas::stream_request> {
+auto make_request_from_user_config(const bhas::user_config& config) -> std::optional<bhas::stream_request> {
 	try {
 		return impl::make_request_from_user_config(config);
 	}
@@ -465,7 +480,7 @@ auto make_request_from_user_config(const bhas::user_config& config) noexcept -> 
 
 namespace jack {
 
-auto set_client_name(std::string_view name) noexcept -> void {
+auto set_client_name(std::string_view name) -> void {
 	api::jack::set_client_name(name);
 }
 
