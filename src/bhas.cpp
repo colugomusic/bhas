@@ -27,6 +27,7 @@ struct Model {
 	std::optional<bhas::stream_request> pending_stream_request;
 	std::optional<bhas::system> system;
 	std::optional<bhas::stream> current_stream;
+	bool init = false;
 };
 
 static Model model;
@@ -193,6 +194,9 @@ auto get_system(bhas::system_rescan) -> const bhas::system& {
 
 [[nodiscard]] static
 auto did_stream_just_stop() -> bool {
+	if (!model.init) {
+		return false;
+	}
 	auto lock = std::unique_lock<std::mutex>(model.critical.mutex);
 	return model.critical.just_stopped;
 }
@@ -211,6 +215,7 @@ auto init(callbacks cb) -> bool {
 	model.cb.stream_stopped       = std::move(cb.stream_stopped);
 	model.cb.stream_start_failure = std::move(cb.stream_start_failure);
 	model.cb.stream_start_success = std::move(cb.stream_start_success);
+	model.init = true;
 	return true;
 }
 
