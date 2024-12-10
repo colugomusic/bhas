@@ -5,11 +5,7 @@ include(cmake/CPM.cmake)
 set(debug_build $<OR:$<CONFIG:Debug>,$<STREQUAL:${CMAKE_BUILD_TYPE},Debug}>>)
 
 # ASIO SDK ######################################################
-CPMAddPackage(
-	NAME          asio_sdk
-	URL           https://www.steinberg.net/asiosdk
-	DOWNLOAD_ONLY YES
-)
+CPMAddPackage(NAME asio_sdk URL https://www.steinberg.net/asiosdk DOWNLOAD_ONLY YES)
 # This is used later by the portaudio CMakeLists
 set(ASIOSDK_PATH_HINT ${asio_sdk_SOURCE_DIR})
 #xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -19,42 +15,29 @@ if (CMAKE_SYSTEM_NAME STREQUAL Linux)
 	set(PA_USE_JACK ON CACHE BOOL "Enable support for Jack")
 endif()
 set(PA_USE_ASIO TRUE CACHE BOOL "Enable support for ASIO")
-CPMAddPackage(
-	NAME           portaudio
-	GIT_REPOSITORY https://github.com/colugomusic/portaudio.git
-	GIT_TAG        master
-	OPTIONS        "BUILD_SHARED_LIBS OFF"
-)
-list(APPEND bhas_library_include_dirs ${portaudio_SOURCE_DIR}/include)
-list(APPEND bhas_library_link_libs PortAudio)
-#xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-# fmt ###########################################################
-CPMAddPackage(
-	NAME              fmt
-	GITHUB_REPOSITORY "fmtlib/fmt"
-	GIT_TAG 10.1.1
-)
-list(APPEND bhas_library_include_dirs ${fmt_SOURCE_DIR}/include)
-list(APPEND bhas_library_link_libs fmt::fmt)
+CPMAddPackage(NAME portaudio GIT_REPOSITORY https://github.com/PortAudio/portaudio.git GIT_TAG aa1cfb0 OPTIONS "BUILD_SHARED_LIBS OFF")
 #xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # library #######################################################
-add_library(${PROJECT_NAME} STATIC
+add_library(bhas STATIC
+	include/bhas.h
 	src/bhas.cpp
 	src/bhas_api.h
 	src/bhas_api_portaudio.cpp
 )
-target_include_directories(${PROJECT_NAME} PRIVATE
-	${CMAKE_CURRENT_LIST_DIR}/include
+add_library(bhas::bhas ALIAS bhas)
+target_include_directories(bhas PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/src
-	${bhas_library_include_dirs}
 )
-target_link_libraries(${PROJECT_NAME} PRIVATE
-	${bhas_library_link_libs}
+target_include_directories(bhas PUBLIC
+	${CMAKE_CURRENT_LIST_DIR}/include
 )
-set_target_properties(${PROJECT_NAME} PROPERTIES
-	CXX_STANDARD 17
+target_link_libraries(bhas PUBLIC
+	portaudio
 )
-target_compile_definitions(${PROJECT_NAME} PRIVATE
+set_target_properties(bhas PROPERTIES
+	CXX_STANDARD 20
+)
+target_compile_definitions(bhas PRIVATE
 	$<${debug_build}:_DEBUG>
 )
 #xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -71,7 +54,7 @@ target_link_libraries(bhas_tests PRIVATE
 	bhas
 )
 set_target_properties(bhas_tests PROPERTIES
-	CXX_STANDARD 17
+	CXX_STANDARD 20
 )
 target_compile_definitions(bhas_tests PRIVATE
 	$<${debug_build}:_DEBUG>

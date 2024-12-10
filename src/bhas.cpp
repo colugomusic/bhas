@@ -1,7 +1,7 @@
 #include "bhas.h"
 #include "bhas_api.h"
 #include <condition_variable>
-#include <fmt/format.h>
+#include <format>
 #include <mutex>
 
 namespace bhas {
@@ -36,22 +36,22 @@ struct function_name { const char* value; };
 
 [[nodiscard]] static
 auto err_exception_caught(function_name func_name, const char* what) -> bhas::error {
-	return {fmt::format("Caught exception in {}: {}", func_name.value, what)};
+	return {std::format("Caught exception in {}: {}", func_name.value, what)};
 }
 
 [[nodiscard]] static
 auto err_exception_caught(function_name func_name) -> bhas::error {
-	return {fmt::format("Caught an unknown exception in {}", func_name.value)};
+	return {std::format("Caught an unknown exception in {}", func_name.value)};
 }
 
 [[nodiscard]] static
 auto info__couldnt_find_user_input_device(bhas::device_name name) -> bhas::info {
-	return {fmt::format("Couldnt' find your saved input device: '{}' so I'm going to try to fall back to the host default.", name.value)};
+	return {std::format("Couldnt' find your saved input device: '{}' so I'm going to try to fall back to the host default.", name.value)};
 }
 
 [[nodiscard]] static
 auto info__couldnt_find_user_output_device(bhas::device_name name) -> bhas::info {
-	return {fmt::format("Couldnt' find your saved output device: '{}' so I'm going to try to fall back to the host default.", name.value)};
+	return {std::format("Couldnt' find your saved output device: '{}' so I'm going to try to fall back to the host default.", name.value)};
 }
 
 [[nodiscard]] static
@@ -61,7 +61,7 @@ auto info__no_default_output_device() -> bhas::info {
 
 [[nodiscard]] static
 auto info__couldnt_find_user_host(bhas::host_name name) -> bhas::info {
-	return {fmt::format("Couldnt' find your saved device host: '{}' so I'm going to try to fall back to the system defaults.", name.value)};
+	return {std::format("Couldnt' find your saved device host: '{}' so I'm going to try to fall back to the system defaults.", name.value)};
 }
 
 [[nodiscard]] static
@@ -70,7 +70,7 @@ auto info_requesting_stream(const bhas::stream_request& request) -> bhas::info {
 	const auto input_device_name  = request.input_device ? system.devices.at(request.input_device->value).name : device_name_view{"none"};
 	const auto output_device_name = system.devices.at(request.output_device.value).name;
 	return {
-		fmt::format(
+		std::format(
 			"Requesting stream: input_device: {}, output_device: {}, sample_rate: {}",
 			input_device_name.value,
 			output_device_name.value,

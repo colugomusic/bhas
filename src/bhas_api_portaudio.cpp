@@ -1,5 +1,5 @@
 #include "bhas_api.h"
-#include <fmt/format.h>
+#include <format>
 #include <mutex>
 #include <numeric>
 #include <portaudio.h>
@@ -133,12 +133,12 @@ auto stream_finished_callback(void*) -> void {
 
 [[nodiscard]] static
 auto err_stream_settings_not_supported() -> bhas::error {
-	return {fmt::format("The requested stream settings are not supported.")};
+	return {std::format("The requested stream settings are not supported.")};
 }
 
 [[nodiscard]] static
 auto info_sample_rate_fallback_try(bhas::sample_rate sr) -> bhas::info {
-	return {fmt::format("I'm going to try falling back to the default sample rate ({} Hz)", sr.value)};
+	return {std::format("I'm going to try falling back to the default sample rate ({} Hz)", sr.value)};
 }
 
 [[nodiscard]] static
@@ -148,12 +148,12 @@ auto info_sample_rate_fallback_success() -> bhas::info {
 
 [[nodiscard]] static
 auto info_sample_rate_fallback_failure(const char* pa_error_text) -> bhas::info {
-	return {fmt::format("It still doesn't work. ({})", pa_error_text)};
+	return {std::format("It still doesn't work. ({})", pa_error_text)};
 }
 
 [[nodiscard]] static
 auto warn_request_not_supported(const char* pa_error_text) -> bhas::warning {
-	return {fmt::format("The requested stream settings are not supported. ({})", pa_error_text)};
+	return {std::format("The requested stream settings are not supported. ({})", pa_error_text)};
 }
 
 auto check_if_supported_or_try_to_fall_back(bhas::stream_request request, bhas::log* log) -> std::optional<bhas::stream_request> {
@@ -216,7 +216,7 @@ auto is_stream_active() -> bool {
 
 auto init(bhas::log* log) -> bool {
 	if (const auto err = Pa_Initialize(); err != paNoError) {
-		log->push_back(bhas::error{fmt::format("Failed to initialize PortAudio. ({})", Pa_GetErrorText(err))});
+		log->push_back(bhas::error{std::format("Failed to initialize PortAudio. ({})", Pa_GetErrorText(err))});
 		return false;
 	}
 	return true;
@@ -283,7 +283,7 @@ auto try_to_open_pa_stream(bhas::stream_request request, const pa_stream_paramet
 
 [[nodiscard]] static
 auto err_stream_open_failed(PaError err) -> bhas::error {
-	return {fmt::format("Failed to open the stream. ({})", Pa_GetErrorText(err))};
+	return {std::format("Failed to open the stream. ({})", Pa_GetErrorText(err))};
 }
 
 [[nodiscard]] static
@@ -313,17 +313,17 @@ auto warn_stream_already_open() -> bhas::warning {
 
 [[nodiscard]] static
 auto err_failed_to_start_stream(const char* reason) -> bhas::error {
-	return {fmt::format("Failed to start the stream. ({})", reason)};
+	return {std::format("Failed to start the stream. ({})", reason)};
 }
 
 [[nodiscard]] static
 auto err_failed_to_close_stream(const char* reason) -> bhas::error {
-	return {fmt::format("Failed to close the stream. ({})", reason)};
+	return {std::format("Failed to close the stream. ({})", reason)};
 }
 
 [[nodiscard]] static
 auto err_failed_to_stop_stream(const char* reason) -> bhas::error {
-	return {fmt::format("Failed to stop the stream. ({})", reason)};
+	return {std::format("Failed to stop the stream. ({})", reason)};
 }
 
 [[nodiscard]] static
