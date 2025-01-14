@@ -25,10 +25,10 @@ enum class callback_result {
 struct device_index    { size_t value; };
 struct device_name     { std::string value; };
 struct device_name_view{ std::string_view value; };
-struct channel_count   { uint32_t value; };
-struct cpu_load        { double value; };
+struct channel_count   { uint32_t value = 0; };
+struct cpu_load        { double value = 0.0; };
 struct error           { std::string value; };
-struct frame_count     { uint32_t value; };
+struct frame_count     { uint32_t value = 0; };
 struct host_index      { size_t value; };
 struct host_name       { std::string value; };
 struct host_name_view  { std::string_view value; };
@@ -36,9 +36,9 @@ struct info            { std::string value; };
 struct input_buffer    { float const * const * buffer; };
 struct notify          { bool value = false; };
 struct output_buffer   { float       * const * buffer; };
-struct output_latency  { double value; };
-struct sample_rate     { uint32_t value; };
-struct stream_time     { double value; };
+struct output_latency  { double value = 0.0; };
+struct sample_rate     { uint32_t value = 0; };
+struct stream_time     { double value = 0.0; };
 struct system_rescan   {};
 struct warning         { std::string value; };
 
