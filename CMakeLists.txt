@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.12)
 project(bhas)
 
-include(cmake/CPM.cmake)
 set(debug_build $<OR:$<CONFIG:Debug>,$<STREQUAL:${CMAKE_BUILD_TYPE},Debug}>>)
 
 # ASIO SDK ######################################################
-CPMAddPackage(NAME asio_sdk URL https://www.steinberg.net/asiosdk DOWNLOAD_ONLY YES)
+FetchContent_Declare(asio_sdk URL https://www.steinberg.net/asiosdk)
+FetchContent_MakeAvailable(asio_sdk)
 # This is used later by the portaudio CMakeLists
 set(ASIOSDK_PATH_HINT ${asio_sdk_SOURCE_DIR})
 #xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -15,7 +15,8 @@ if (CMAKE_SYSTEM_NAME STREQUAL Linux)
 	set(PA_USE_JACK ON CACHE BOOL "Enable support for Jack")
 endif()
 set(PA_USE_ASIO TRUE CACHE BOOL "Enable support for ASIO")
-CPMAddPackage(NAME portaudio GIT_REPOSITORY https://github.com/PortAudio/portaudio.git GIT_TAG aa1cfb0 OPTIONS "BUILD_SHARED_LIBS OFF")
+set(BUILD_SHARED_LIBS OFF)
+add_subdirectory(extern/submodules/portaudio)
 #xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # library #######################################################
 add_library(bhas STATIC
