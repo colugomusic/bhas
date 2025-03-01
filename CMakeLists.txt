@@ -4,7 +4,7 @@ project(bhas)
 set(debug_build $<OR:$<CONFIG:Debug>,$<STREQUAL:${CMAKE_BUILD_TYPE},Debug}>>)
 
 # ASIO SDK ######################################################
-FetchContent_Declare(asio_sdk URL https://www.steinberg.net/asiosdk)
+FetchContent_Declare(asio_sdk URL https://www.steinberg.net/asiosdk DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
 FetchContent_MakeAvailable(asio_sdk)
 # This is used later by the portaudio CMakeLists
 set(ASIOSDK_PATH_HINT ${asio_sdk_SOURCE_DIR})
