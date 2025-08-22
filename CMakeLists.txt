@@ -22,7 +22,7 @@ target_sources(bhas PRIVATE
 
 target_include_directories(bhas PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src)
 
-target_link_libraries(bhas PRIVATE $<BUILD_INTERFACE:PortAudio::portaudio>)
+target_link_libraries(bhas PUBLIC PortAudio::portaudio)
 set_target_properties(bhas PROPERTIES CXX_STANDARD 20)
 
 if (BHAS_BUILD_TESTS)
