@@ -3,7 +3,7 @@ project(bhas)
 
 option(BHAS_BUILD_TESTS "Build tests" OFF)
 
-find_package(portaudio REQUIRED CONFIG)
+find_package(PortAudio REQUIRED CONFIG)
 
 add_library(bhas)
 add_library(bhas::bhas ALIAS bhas)
