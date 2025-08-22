@@ -1,65 +1,43 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.30)
 project(bhas)
 
-set(debug_build $<OR:$<CONFIG:Debug>,$<STREQUAL:${CMAKE_BUILD_TYPE},Debug}>>)
+option(BHAS_BUILD_TESTS "Build tests" OFF)
 
-# ASIO SDK ######################################################
-include(FetchContent)
-set(FETCHCONTENT_QUIET off)
-FetchContent_Declare(asio_sdk URL https://www.steinberg.net/asiosdk DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
-FetchContent_MakeAvailable(asio_sdk)
-# This is used later by the portaudio CMakeLists
-set(ASIOSDK_PATH_HINT ${asio_sdk_SOURCE_DIR})
-#xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-# portaudio #####################################################
-if (CMAKE_SYSTEM_NAME STREQUAL Linux)
-	set(PA_USE_ALSA ON CACHE BOOL "Enable support for ALSA")
-	set(PA_USE_JACK ON CACHE BOOL "Enable support for Jack")
-endif()
-set(PA_USE_ASIO TRUE CACHE BOOL "Enable support for ASIO")
-set(BUILD_SHARED_LIBS OFF)
-add_subdirectory(extern/submodules/portaudio)
-#xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-# library #######################################################
-add_library(bhas STATIC
-	include/bhas.h
+find_package(portaudio REQUIRED CONFIG)
+
+add_library(bhas)
+add_library(bhas::bhas ALIAS bhas)
+
+target_sources(bhas PUBLIC
+	FILE_SET HEADERS
+	BASE_DIRS ${CMAKE_CURRENT_LIST_DIR}/include
+	FILES ${CMAKE_CURRENT_LIST_DIR}/include/bhas.h
+)
+
+target_sources(bhas PRIVATE
 	src/bhas.cpp
 	src/bhas_api.h
 	src/bhas_api_portaudio.cpp
 )
-add_library(bhas::bhas ALIAS bhas)
-target_include_directories(bhas PRIVATE
-	${CMAKE_CURRENT_LIST_DIR}/src
+
+target_include_directories(bhas PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src)
+
+target_link_libraries(bhas PRIVATE $<BUILD_INTERFACE:PortAudio::portaudio>)
+set_target_properties(bhas PROPERTIES CXX_STANDARD 20)
+
+if (BHAS_BUILD_TESTS)
+	add_executable(bhas_tests src/bhas_tests.cpp src/doctest.h)
+	target_include_directories(bhas_tests PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src ${CMAKE_CURRENT_LIST_DIR}/include)
+	target_link_libraries(bhas_tests PRIVATE bhas)
+	set_target_properties(bhas_tests PROPERTIES CXX_STANDARD 20)
+endif()
+
+include(CMakePackageConfigHelpers)
+install(TARGETS bhas EXPORT bhasTargets FILE_SET HEADERS)
+install(EXPORT bhasTargets FILE bhasTargets.cmake NAMESPACE bhas:: DESTINATION lib/cmake/bhas)
+configure_package_config_file(
+    "${CMAKE_CURRENT_LIST_DIR}/cmake/bhasConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/bhasConfig.cmake"
+    INSTALL_DESTINATION lib/cmake/bhas
 )
-target_include_directories(bhas PUBLIC
-	${CMAKE_CURRENT_LIST_DIR}/include
-)
-target_link_libraries(bhas PUBLIC
-	portaudio
-)
-set_target_properties(bhas PROPERTIES
-	CXX_STANDARD 20
-)
-target_compile_definitions(bhas PRIVATE
-	$<${debug_build}:_DEBUG>
-)
-#xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-# tests #########################################################
-add_executable(bhas_tests
-	src/bhas_tests.cpp
-	src/doctest.h
-)
-target_include_directories(bhas_tests PRIVATE
-	${CMAKE_CURRENT_LIST_DIR}/src
-	${CMAKE_CURRENT_LIST_DIR}/include
-)
-target_link_libraries(bhas_tests PRIVATE
-	bhas
-)
-set_target_properties(bhas_tests PROPERTIES
-	CXX_STANDARD 20
-)
-target_compile_definitions(bhas_tests PRIVATE
-	$<${debug_build}:_DEBUG>
-)
-#xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/bhasConfig.cmake" DESTINATION lib/cmake/bhas)

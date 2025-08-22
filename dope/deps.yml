@@ -1,0 +1,5 @@
+- name:                portaudio
+  git:                 https://github.com/PortAudio/portaudio.git
+  tag:                 7e47f1c
+  build-type:          cmake
+  cmake-options:       -DASIOSDK_PATH_HINT=__dope_root__/install/src/asio-sdk/asiosdk_2.3.3_2019-06-14 -DPA_USE_ASIO=ON -DPA_USE_JACK=__dope_on_linux__ -DPA_USE_ALSA=__dope_on_linux__
