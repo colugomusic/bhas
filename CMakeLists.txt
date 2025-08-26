@@ -3,11 +3,11 @@ project(bhas)
 
 option(BHAS_BUILD_TESTS "Build tests" OFF)
 
+find_package(PortAudio REQUIRED CONFIG)
 if (UNIX AND NOT APPLE)
 find_package(Jack REQUIRED)
+find_package(PulseAudio REQUIRED)
 endif()
-
-find_package(PortAudio REQUIRED CONFIG)
 
 add_library(bhas)
 add_library(bhas::bhas ALIAS bhas)
