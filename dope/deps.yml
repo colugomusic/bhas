@@ -1,4 +1,4 @@
-- name:                portaudio
+- name:                PortAudio
   git:                 https://github.com/PortAudio/portaudio.git
   tag:                 7e47f1c
   build-type:          cmake
