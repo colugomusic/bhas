@@ -2,5 +2,9 @@
 
 include(CMakeFindDependencyMacro)
 find_dependency(PortAudio)
+if (UNIX AND NOT APPLE)
+find_dependency(JACK)
+find_dependency(PulseAudio)
+endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/bhasTargets.cmake")
